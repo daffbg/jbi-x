@@ -37,7 +37,10 @@ export
     parse_sql,
     start_repl,
     row_number,
-    rank
+    rank,
+    LinearRegressionModel,
+    train_linear_regression,
+    predict
 
 include("types.jl")
 include("vectors.jl")
@@ -57,5 +60,6 @@ include("cli.jl")
 include("sql_parser.jl")
 include("repl.jl")
 include("window.jl")
+include("ml.jl")
 
 end
