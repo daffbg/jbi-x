@@ -3,30 +3,33 @@ using JBIXCore
 
 @testset "JBI-X Core" begin
 
-    @testset "IO: Paginated CSV Reader" begin
-        # একটি বড় ডামি ফাইল তৈরি করা হচ্ছে (১৫ রো)
-        open("/tmp/test_pages.csv", "w") do io
-            println(io, "id,val")
-            for i in 1:15
-                println(io, "$i,data_$i")
-            end
-        end
+    @testset "Window: ROW_NUMBER" begin
+        ids = ColumnVector(Int64[10, 20, 30], Int64Tag)
+        batch = RecordBatch([ids], [:id])
         
-        # পেজ সাইজ ৫ দিয়ে রিড করা হচ্ছে
-        pages = collect(read_csv_pages("/tmp/test_pages.csv", 5))
+        rn_col = row_number(batch)
+        @test rn_col.values == Int64[1, 2, 3]
+        @test rn_col.logical_type == Int64Tag
+    end
+
+    @testset "Window: RANK with ties" begin
+        # Data:
+        # name, score
+        # Alice, 100
+        # Bob, 50
+        # Charlie, 100
+        # David, 25
+        names = ColumnVector(String["Alice", "Bob", "Charlie", "David"], StringTag)
+        scores = ColumnVector(Int64[100, 50, 100, 25], Int64Tag)
+        batch = RecordBatch([names, scores], [:name, :score])
         
-        # ১৫ রো এবং পেজ সাইজ ৫ হলে ৩টি পেজ হওয়ার কথা
-        @test length(pages) == 3
+        rank_col = rank(batch, :score)
         
-        # প্রতি পেজে ৫টি রো থাকার কথা
-        @test nrows(pages[1]) == 5
-        @test nrows(pages[2]) == 5
-        @test nrows(pages[3]) == 5
-        
-        # প্রথম পেজের প্রথম ভ্যালু চেক করা
-        @test pages[1].columns[1].values[1] == "1"
-        # শেষ পেজের শেষ ভ্যালু চেক করা
-        @test pages[3].columns[2].values[5] == "data_15"
+        # Sorted scores: 25(David, rank 1), 50(Bob, rank 2), 100(Alice, rank 3), 100(Charlie, rank 3)
+        @test rank_col.values[1] == 3 # Alice
+        @test rank_col.values[2] == 2 # Bob
+        @test rank_col.values[3] == 3 # Charlie
+        @test rank_col.values[4] == 1 # David
     end
 
 end

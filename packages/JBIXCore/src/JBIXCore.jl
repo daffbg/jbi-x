@@ -35,7 +35,9 @@ export
     sort_batch,
     print_batch,
     parse_sql,
-    start_repl
+    start_repl,
+    row_number,
+    rank
 
 include("types.jl")
 include("vectors.jl")
@@ -54,5 +56,6 @@ include("sort.jl")
 include("cli.jl")
 include("sql_parser.jl")
 include("repl.jl")
+include("window.jl")
 
 end
