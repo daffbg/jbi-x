@@ -48,7 +48,9 @@ export
     create_index,
     filter_using_index,
     process_request,
-    start_server
+    start_server,
+    save_batch,
+    load_batch
 
 include("types.jl")
 include("vectors.jl")
@@ -71,5 +73,6 @@ include("window.jl")
 include("ml.jl")
 include("indexing.jl")
 include("server.jl")
+include("persistence.jl")
 
 end
