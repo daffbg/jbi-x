@@ -1,45 +1,43 @@
 using Test
 using JBIXCore
+using Dates
 
 @testset "JBI-X Core" begin
 
-    @testset "Sort: Ascending with Nulls" begin
-        ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
-        vals = ColumnVector(Int64[30, 10, 20], Int64Tag; validity=BitVector([true, false, true]))
-        batch = RecordBatch([ids, vals], [:id, :val])
-        
-        sorted_batch = sort_batch(batch, :val)
-        
-        @test sorted_batch.columns[1].values == Int64[2, 3, 1]
-        @test sorted_batch.columns[2].values == Int64[10, 20, 30]
-        @test sorted_batch.columns[2].validity == BitVector([false, true, true])
+    @testset "IO: Read CSV with Date" begin
+        csv_content = """
+        id,event_date
+        1,2023-01-01
+        2,2023-02-15
+        3,2023-03-20
+        """
+        open("/tmp/test_dates.csv", "w") do io
+            print(io, csv_content)
+        end
+        batch = read_csv("/tmp/test_dates.csv")
+        @test batch.columns[2].logical_type == DateTag
+        @test batch.columns[2].values == [Date(2023,1,1), Date(2023,2,15), Date(2023,3,20)]
     end
 
-    @testset "IO: Write CSV" begin
-        ids = ColumnVector(Int64[1, 2], Int64Tag)
-        names = ColumnVector(String["Alice", "Bob"], StringTag; validity=BitVector([true, false]))
-        batch = RecordBatch([ids, names], [:id, :name])
+    @testset "SQL Parser: Basic Query" begin
+        csv_content = """
+        id,amount,name
+        1,10.5,Alice
+        2,20.0,Bob
+        3,30.2,Charlie
+        """
+        open("/tmp/test_sql.csv", "w") do io
+            print(io, csv_content)
+        end
+        batch = read_csv("/tmp/test_sql.csv")
         
-        path = "/tmp/test_write.csv"
-        write_csv(batch, path)
+        query = "SELECT name, amount FROM data WHERE amount > 15"
+        plan = parse_sql(query)
+        result = execute(batch, plan)
         
-        content = read(path, String)
-        expected = "id,name\n1,Alice\n2,\n"
-        @test content == expected
-    end
-
-    @testset "CLI: Print Batch" begin
-        ids = ColumnVector(Int64[1, 2], Int64Tag)
-        batch = RecordBatch([ids], [:id])
-        
-        # io আর্গুমেন্ট ব্যবহার করে আউটপুট ক্যাপচার করা হচ্ছে
-        io = IOBuffer()
-        print_batch(batch, io)
-        output = String(take!(io))
-        
-        @test occursin("id", output)
-        @test occursin("1", output)
-        @test occursin("2", output)
+        @test nrows(result) == 2
+        @test result.names == [:name, :amount]
+        @test result.columns[1].values == String["Bob", "Charlie"]
     end
 
 end

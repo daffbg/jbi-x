@@ -1,3 +1,5 @@
+using Dates
+
 """
 Simple CSV reader and writer.
 """
@@ -35,6 +37,7 @@ function read_csv(
         
         is_int = all(x -> occursin(r"^-?\d+$", x), col_strs)
         is_float = all(x -> occursin(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$", x), col_strs)
+        is_date = all(x -> occursin(r"^\d{4}-\d{2}-\d{2}$", x), col_strs)
         
         if is_int
             vals = parse.(Int64, col_strs)
@@ -42,6 +45,9 @@ function read_csv(
         elseif is_float
             vals = parse.(Float64, col_strs)
             columns[c] = ColumnVector(vals, Float64Tag)
+        elseif is_date
+            vals = Date.(col_strs, "yyyy-mm-dd")
+            columns[c] = ColumnVector(vals, DateTag)
         else
             vals = String.(col_strs)
             columns[c] = ColumnVector(vals, StringTag)
@@ -51,20 +57,14 @@ function read_csv(
     return RecordBatch(columns, names)
 end
 
-"""
-Write a RecordBatch to a CSV file.
-Null values are written as empty strings.
-"""
 function write_csv(
     batch::RecordBatch,
     path::String;
     delim::Char=','
 )
     open(path, "w") do io
-        # Write header
         println(io, join(String.(batch.names), delim))
         
-        # Write rows
         for r in 1:nrows(batch)
             row_vals = String[]
             for c in 1:ncols(batch)
@@ -72,7 +72,7 @@ function write_csv(
                 if col.validity[r]
                     push!(row_vals, string(col.values[r]))
                 else
-                    push!(row_vals, "") # Null represented as empty
+                    push!(row_vals, "")
                 end
             end
             println(io, join(row_vals, delim))

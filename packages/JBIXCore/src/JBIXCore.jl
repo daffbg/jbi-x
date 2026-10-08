@@ -31,7 +31,9 @@ export
     hash_aggregate_sum,
     hash_join,
     sort_batch,
-    print_batch
+    print_batch,
+    parse_sql,
+    start_repl
 
 include("types.jl")
 include("vectors.jl")
@@ -48,5 +50,7 @@ include("aggregate.jl")
 include("join.jl")
 include("sort.jl")
 include("cli.jl")
+include("sql_parser.jl")
+include("repl.jl")
 
 end
