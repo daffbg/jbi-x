@@ -40,7 +40,13 @@ export
     rank,
     LinearRegressionModel,
     train_linear_regression,
-    predict
+    predict,
+    LogisticRegressionModel,
+    train_logistic_regression,
+    predict_proba,
+    HashIndex,
+    create_index,
+    filter_using_index
 
 include("types.jl")
 include("vectors.jl")
@@ -61,5 +67,6 @@ include("sql_parser.jl")
 include("repl.jl")
 include("window.jl")
 include("ml.jl")
+include("indexing.jl")
 
 end
