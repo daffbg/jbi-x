@@ -26,6 +26,7 @@ export
     Equal,
     evaluate,
     read_csv,
+    read_csv_pages,
     write_csv,
     QueryPlan,
     execute,

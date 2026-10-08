@@ -31,7 +31,6 @@ function read_csv(
     for c in 1:ncols
         names[c] = Symbol(header[c])
         col_strs = raw_data[c]
-        
         is_int = all(x -> occursin(r"^-?\d+$", x), col_strs)
         is_float = all(x -> occursin(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$", x), col_strs)
         is_date = all(x -> occursin(r"^\d{4}-\d{2}-\d{2}$", x), col_strs)
@@ -75,4 +74,45 @@ function write_csv(batch::RecordBatch, path::String; delim::Char=',')
         end
     end
     return path
+end
+
+"""
+Page based CSV reader for handling large files.
+Returns a Vector of RecordBatches of a specified page_size.
+"""
+function read_csv_pages(path::String, page_size::Int; delim::Char=',')
+    pages = Vector{RecordBatch}()
+    
+    open(path, "r") do io
+        header = split(replace(readline(io), "\r" => ""), delim)
+        ncols = length(header)
+        names = [Symbol(h) for h in header]
+        
+        while !eof(io)
+            raw_data = Vector{Vector{String}}()
+            for c in 1:ncols
+                push!(raw_data, String[])
+            end
+            
+            rows_read = 0
+            while rows_read < page_size && !eof(io)
+                line = readline(io)
+                parts = split(replace(line, "\r" => ""), delim)
+                for c in 1:ncols
+                    push!(raw_data[c], parts[c])
+                end
+                rows_read += 1
+            end
+            
+            if rows_read > 0
+                columns = Vector{ColumnVector}(undef, ncols)
+                for c in 1:ncols
+                    columns[c] = ColumnVector(String.(raw_data[c]), StringTag)
+                end
+                push!(pages, RecordBatch(columns, names))
+            end
+        end
+    end
+    
+    return pages
 end

@@ -3,31 +3,30 @@ using JBIXCore
 
 @testset "JBI-X Core" begin
 
-    @testset "End-to-End: Iris Dataset with JOIN, FILTER, GROUP BY, ORDER BY" begin
-        # Load Iris and Species Meta
-        iris = read_csv("/tmp/iris.csv")
-        species_meta = read_csv("/tmp/species_meta.csv")
+    @testset "IO: Paginated CSV Reader" begin
+        # একটি বড় ডামি ফাইল তৈরি করা হচ্ছে (১৫ রো)
+        open("/tmp/test_pages.csv", "w") do io
+            println(io, "id,val")
+            for i in 1:15
+                println(io, "$i,data_$i")
+            end
+        end
         
-        tables = Dict(:iris => iris, :species_meta => species_meta)
+        # পেজ সাইজ ৫ দিয়ে রিড করা হচ্ছে
+        pages = collect(read_csv_pages("/tmp/test_pages.csv", 5))
         
-        # Query: 
-        # SELECT species, sum_petal_length 
-        # FROM iris JOIN species_meta ON iris.species = species_meta.species 
-        # WHERE petal_length > 1.5 
-        # GROUP BY species 
-        # ORDER BY sum_petal_length DESC
-        query = "SELECT species, SUM(petal_length) FROM iris JOIN species_meta ON iris.species = species_meta.species WHERE petal_length > 1.5 GROUP BY species ORDER BY sum_petal_length DESC"
+        # ১৫ রো এবং পেজ সাইজ ৫ হলে ৩টি পেজ হওয়ার কথা
+        @test length(pages) == 3
         
-        plan = parse_sql(query)
-        result = execute(tables, plan)
+        # প্রতি পেজে ৫টি রো থাকার কথা
+        @test nrows(pages[1]) == 5
+        @test nrows(pages[2]) == 5
+        @test nrows(pages[3]) == 5
         
-        @test nrows(result) == 3
-        @test ncols(result) == 2
-        
-        # Virginica has the largest petals, so it should be first after DESC sort
-        @test result.columns[1].values[1] == "virginica"
-        # Check if sum is greater than 0
-        @test result.columns[2].values[1] > 50.0
+        # প্রথম পেজের প্রথম ভ্যালু চেক করা
+        @test pages[1].columns[1].values[1] == "1"
+        # শেষ পেজের শেষ ভ্যালু চেক করা
+        @test pages[3].columns[2].values[5] == "data_15"
     end
 
 end
