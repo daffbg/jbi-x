@@ -1,6 +1,18 @@
 function parse_sql(query::String)::QueryPlan
     upper_q = uppercase(query)
     
+    union_idx = findfirst(" UNION ", upper_q)
+    
+    if union_idx !== nothing
+        left_query = String(strip(query[1:union_idx[1]-1]))
+        right_query = String(strip(query[union_idx[end]+1:end]))
+        
+        left_plan = parse_sql(left_query)
+        right_plan = parse_sql(right_query)
+        
+        return QueryPlan(nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, [left_plan, right_plan])
+    end
+    
     select_idx = findfirst("SELECT", upper_q)
     from_idx = findfirst("FROM", upper_q)
     join_idx = findfirst("JOIN", upper_q)
@@ -122,5 +134,5 @@ function parse_sql(query::String)::QueryPlan
         end
     end
     
-    return QueryPlan(join_plan, filter_expr, proj, group_by, having_expr, order_by, limit_val)
+    return QueryPlan(join_plan, left_table, filter_expr, proj, group_by, having_expr, order_by, limit_val, nothing)
 end

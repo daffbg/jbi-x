@@ -1,17 +1,45 @@
 struct QueryPlan
     join::Union{Tuple{Symbol, Symbol, Symbol, Symbol}, Nothing}
+    base_table::Union{Symbol, Nothing}
     filter::Union{Expression, Nothing}
     project::Union{Vector{Symbol}, Nothing}
     group_by::Union{Tuple{Symbol, Symbol}, Nothing}
     having::Union{Expression, Nothing}
     order_by::Union{Tuple{Symbol, Bool}, Nothing}
     limit::Union{Int, Nothing}
+    union_queries::Union{Vector{QueryPlan}, Nothing}
 end
 
 function execute(tables::Dict{Symbol, RecordBatch}, plan::QueryPlan)
+    if plan.union_queries !== nothing && !isempty(plan.union_queries)
+        batches = [execute(tables, p) for p in plan.union_queries]
+        current_batch = batches[1]
+        
+        for i in 2:length(batches)
+            next_batch = batches[i]
+            new_cols = Vector{ColumnVector}(undef, ncols(current_batch))
+            
+            for c in 1:ncols(current_batch)
+                col1 = current_batch.columns[c]
+                col2 = next_batch.columns[c]
+                
+                vals = vcat(col1.values, col2.values)
+                validity = vcat(col1.validity, col2.validity)
+                
+                new_cols[c] = ColumnVector(vals, col1.logical_type; validity=validity)
+            end
+            
+            current_batch = RecordBatch(new_cols, current_batch.names)
+        end
+        
+        return current_batch
+    end
+    
     if plan.join !== nothing
         l_table, r_table, l_key, r_key = plan.join
         current_batch = hash_join(tables[l_table], tables[r_table], l_key, r_key)
+    elseif plan.base_table !== nothing
+        current_batch = tables[plan.base_table]
     else
         current_batch = first(values(tables))
     end
