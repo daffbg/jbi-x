@@ -2,7 +2,7 @@
 RecordBatch is the fundamental vectorized execution unit.
 """
 struct RecordBatch
-    columns::Vector{Any}
+    columns::Vector{ColumnVector}
     names::Vector{Symbol}
     nrows::Int
 end
@@ -31,7 +31,7 @@ function RecordBatch(
     end
 
     return RecordBatch(
-        Any[columns...],
+        ColumnVector[columns...],
         names,
         row_count
     )

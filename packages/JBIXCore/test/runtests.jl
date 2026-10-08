@@ -4,40 +4,53 @@ using Dates
 
 @testset "JBI-X Core" begin
 
-    @testset "IO: Read CSV with Date" begin
+    @testset "IO: Read CSV with Bool" begin
         csv_content = """
-        id,event_date
-        1,2023-01-01
-        2,2023-02-15
-        3,2023-03-20
+        id,is_active
+        1,true
+        2,false
+        3,true
         """
-        open("/tmp/test_dates.csv", "w") do io
+        open("/tmp/test_bool.csv", "w") do io
             print(io, csv_content)
         end
-        batch = read_csv("/tmp/test_dates.csv")
-        @test batch.columns[2].logical_type == DateTag
-        @test batch.columns[2].values == [Date(2023,1,1), Date(2023,2,15), Date(2023,3,20)]
+        batch = read_csv("/tmp/test_bool.csv")
+        @test batch.columns[2].logical_type == BoolTag
+        @test batch.columns[2].values == Bool[true, false, true]
     end
 
-    @testset "SQL Parser: Basic Query" begin
+    @testset "Expressions: Evaluate Equal" begin
+        col1 = ColumnVector(Int64[1, 5, 3], Int64Tag)
+        col2 = ColumnVector(Int64[1, 2, 3], Int64Tag)
+        batch = RecordBatch([col1, col2], [:a, :b])
+        
+        expr = Equal(ColumnRef(:a), ColumnRef(:b))
+        result = evaluate(expr, batch)
+        @test result.values == Bool[true, false, true]
+    end
+
+    @testset "SQL Parser: GROUP BY and ORDER BY" begin
         csv_content = """
-        id,amount,name
-        1,10.5,Alice
-        2,20.0,Bob
-        3,30.2,Charlie
+        id,dept,salary
+        1,IT,100
+        2,HR,50
+        3,IT,200
+        4,HR,150
         """
-        open("/tmp/test_sql.csv", "w") do io
+        open("/tmp/test_groupby.csv", "w") do io
             print(io, csv_content)
         end
-        batch = read_csv("/tmp/test_sql.csv")
+        batch = read_csv("/tmp/test_groupby.csv")
         
-        query = "SELECT name, amount FROM data WHERE amount > 15"
+        # SELECT dept, SUM(salary) FROM data GROUP BY dept ORDER BY sum_salary DESC
+        query = "SELECT dept, SUM(salary) FROM data GROUP BY dept ORDER BY sum_salary DESC"
         plan = parse_sql(query)
         result = execute(batch, plan)
         
+        # IT: 300, HR: 200. Descending order -> IT first, then HR
         @test nrows(result) == 2
-        @test result.names == [:name, :amount]
-        @test result.columns[1].values == String["Bob", "Charlie"]
+        @test result.columns[1].values == String["IT", "HR"]
+        @test result.columns[2].values == Int64[300, 200]
     end
 
 end

@@ -23,6 +23,7 @@ export
     ColumnRef,
     Add,
     GreaterThan,
+    Equal,
     evaluate,
     read_csv,
     write_csv,

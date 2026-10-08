@@ -1,8 +1,5 @@
 using Dates
 
-"""
-Simple CSV reader and writer.
-"""
 function read_csv(
     path::String;
     delim::Char=',',
@@ -28,7 +25,7 @@ function read_csv(
         end
     end
     
-    columns = Vector{Any}(undef, ncols)
+    columns = Vector{ColumnVector}(undef, ncols)
     names = Vector{Symbol}(undef, ncols)
     
     for c in 1:ncols
@@ -38,8 +35,12 @@ function read_csv(
         is_int = all(x -> occursin(r"^-?\d+$", x), col_strs)
         is_float = all(x -> occursin(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$", x), col_strs)
         is_date = all(x -> occursin(r"^\d{4}-\d{2}-\d{2}$", x), col_strs)
+        is_bool = all(x -> lowercase(x) in ["true", "false"], col_strs)
         
-        if is_int
+        if is_bool
+            vals = [lowercase(x) == "true" for x in col_strs]
+            columns[c] = ColumnVector(vals, BoolTag)
+        elseif is_int
             vals = parse.(Int64, col_strs)
             columns[c] = ColumnVector(vals, Int64Tag)
         elseif is_float
@@ -57,14 +58,9 @@ function read_csv(
     return RecordBatch(columns, names)
 end
 
-function write_csv(
-    batch::RecordBatch,
-    path::String;
-    delim::Char=','
-)
+function write_csv(batch::RecordBatch, path::String; delim::Char=',')
     open(path, "w") do io
         println(io, join(String.(batch.names), delim))
-        
         for r in 1:nrows(batch)
             row_vals = String[]
             for c in 1:ncols(batch)

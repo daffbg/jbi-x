@@ -1,18 +1,15 @@
-"""
-Simple execution pipeline that ties together filtering and projection.
-"""
 struct QueryPlan
     filter::Union{Expression, Nothing}
     project::Union{Vector{Symbol}, Nothing}
+    group_by::Union{Tuple{Symbol, Symbol}, Nothing} # (group_col, agg_col)
+    order_by::Union{Tuple{Symbol, Bool}, Nothing} # (col_name, rev)
 end
 
 function execute(batch::RecordBatch, plan::QueryPlan)
     current_batch = batch
     
-    # ১. ফিল্টার অপারেশন (যদি থাকে)
     if plan.filter !== nothing
         mask_col = evaluate(plan.filter, current_batch)
-        # নিশ্চিত করছি যে ফিল্টার এক্সপ্রেশনটি বুলিয়ান টাইপ রিটার্ন করেছে
         if mask_col.logical_type != BoolTag
             throw(ArgumentError("Filter expression must evaluate to a boolean column"))
         end
@@ -20,7 +17,16 @@ function execute(batch::RecordBatch, plan::QueryPlan)
         current_batch = apply_selection(current_batch, selection)
     end
     
-    # ২. প্রজেকশন অপারেশন (যদি থাকে)
+    if plan.group_by !== nothing
+        group_col, agg_col = plan.group_by
+        current_batch = hash_aggregate_sum(current_batch, group_col, agg_col)
+    end
+    
+    if plan.order_by !== nothing
+        col_name, rev = plan.order_by
+        current_batch = sort_batch(current_batch, col_name; rev=rev)
+    end
+    
     if plan.project !== nothing
         current_batch = project(current_batch, plan.project)
     end

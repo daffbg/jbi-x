@@ -22,7 +22,11 @@ struct GreaterThan <: Expression
     right::Expression
 end
 
-# Evaluate an expression against a RecordBatch, returning a ColumnVector
+struct Equal <: Expression
+    left::Expression
+    right::Expression
+end
+
 function evaluate(expr::Literal, batch::RecordBatch)
     n = nrows(batch)
     T = typeof(expr.value)
@@ -44,11 +48,7 @@ function evaluate(expr::Add, batch::RecordBatch)
     return add_columns(left_col, right_col)
 end
 
-# Helper for greater-than comparison with validity propagation
-function greater_than_columns(
-    left::ColumnVector{L},
-    right::ColumnVector{R}
-) where {L, R}
+function greater_than_columns(left::ColumnVector{L}, right::ColumnVector{R}) where {L, R}
     n = length(left.values)
     vals = Vector{Bool}(undef, n)
     validity = BitVector(undef, n)
@@ -70,4 +70,28 @@ function evaluate(expr::GreaterThan, batch::RecordBatch)
     left_col = evaluate(expr.left, batch)
     right_col = evaluate(expr.right, batch)
     return greater_than_columns(left_col, right_col)
+end
+
+function equal_columns(left::ColumnVector{L}, right::ColumnVector{R}) where {L, R}
+    n = length(left.values)
+    vals = Vector{Bool}(undef, n)
+    validity = BitVector(undef, n)
+    
+    @inbounds for i in 1:n
+        if left.validity[i] && right.validity[i]
+            vals[i] = left.values[i] == right.values[i]
+            validity[i] = true
+        else
+            vals[i] = false
+            validity[i] = false
+        end
+    end
+    
+    return ColumnVector(vals, BoolTag; validity=validity)
+end
+
+function evaluate(expr::Equal, batch::RecordBatch)
+    left_col = evaluate(expr.left, batch)
+    right_col = evaluate(expr.right, batch)
+    return equal_columns(left_col, right_col)
 end
