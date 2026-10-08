@@ -17,7 +17,13 @@ export
     apply_selection,
     project,
     add_columns,
-    multiply_scalar
+    multiply_scalar,
+    Expression,
+    Literal,
+    ColumnRef,
+    Add,
+    GreaterThan,
+    evaluate
 
 include("types.jl")
 include("vectors.jl")
@@ -27,5 +33,6 @@ include("filter.jl")
 include("apply_selection.jl")
 include("project.jl")
 include("scalar_functions.jl")
+include("expressions.jl")
 
 end
