@@ -65,7 +65,6 @@ using JBIXCore
         amounts = ColumnVector(Float64[10.0, 20.0, 30.0, 40.0], Float64Tag)
         batch = RecordBatch([ids, amounts], [:id, :amount])
 
-        # 20 এর সমান বা বেশি এমন ডেটা ফিল্টার করা
         selection = filter_column(amounts, x -> x >= 20.0)
         filtered_batch = apply_selection(batch, selection)
 
@@ -84,7 +83,6 @@ using JBIXCore
         )
         batch = RecordBatch([ids, amounts], [:id, :amount])
 
-        # amounts >= 20 দিয়ে ফিল্টার করলে দ্বিতীয় রো (20.0) বাদ পড়বে কারণ তার validity false
         selection = filter_column(amounts, x -> x >= 20.0)
         filtered_batch = apply_selection(batch, selection)
 
@@ -92,6 +90,31 @@ using JBIXCore
         @test filtered_batch.columns[1].values == Int64[3, 4]
         @test filtered_batch.columns[2].values == Float64[30.0, 40.0]
         @test all(filtered_batch.columns[2].validity)
+    end
+
+    @testset "Project columns" begin
+        ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
+        amounts = ColumnVector(Float64[10.0, 20.0, 30.0], Float64Tag)
+        names = ColumnVector(String["A", "B", "C"], StringTag)
+        batch = RecordBatch([ids, amounts, names], [:id, :amount, :name])
+
+        # শুধু amount এবং id কলামটি বেছে নিচ্ছি (অর্ডার পরিবর্তন করে)
+        projected_batch = project(batch, [:amount, :id])
+
+        @test ncols(projected_batch) == 2
+        @test nrows(projected_batch) == 3
+        @test projected_batch.names == [:amount, :id]
+        @test projected_batch.columns[1].values == Float64[10.0, 20.0, 30.0]
+        @test projected_batch.columns[2].values == Int64[1, 2, 3]
+    end
+
+    @testset "Project validation" begin
+        ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
+        amounts = ColumnVector(Float64[10.0, 20.0, 30.0], Float64Tag)
+        batch = RecordBatch([ids, amounts], [:id, :amount])
+
+        # ভুল কলামের নাম দিলে ArgumentError দেবে
+        @test_throws ArgumentError project(batch, [:id, :nonexistent])
     end
 
 end

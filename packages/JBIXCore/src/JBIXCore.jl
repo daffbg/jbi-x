@@ -14,7 +14,8 @@ export
     nrows,
     ncols,
     filter_column,
-    apply_selection
+    apply_selection,
+    project
 
 include("types.jl")
 include("vectors.jl")
@@ -22,5 +23,6 @@ include("batch.jl")
 include("selection.jl")
 include("filter.jl")
 include("apply_selection.jl")
+include("project.jl")
 
 end
