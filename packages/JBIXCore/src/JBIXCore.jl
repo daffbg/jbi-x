@@ -23,7 +23,8 @@ export
     ColumnRef,
     Add,
     GreaterThan,
-    evaluate
+    evaluate,
+    read_csv
 
 include("types.jl")
 include("vectors.jl")
@@ -34,5 +35,6 @@ include("apply_selection.jl")
 include("project.jl")
 include("scalar_functions.jl")
 include("expressions.jl")
+include("io.jl")
 
 end
