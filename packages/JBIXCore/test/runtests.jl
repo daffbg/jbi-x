@@ -6,7 +6,6 @@ using JBIXCore
     @testset "ColumnVector" begin
         values = Int64[10, 20, 30, 40]
         column = ColumnVector(values, Int64Tag)
-
         @test column.values == values
         @test length(column.validity) == 4
         @test all(column.validity)
@@ -30,7 +29,6 @@ using JBIXCore
         ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
         amounts = ColumnVector(Float64[10.0, 20.0, 30.0], Float64Tag)
         batch = RecordBatch([ids, amounts], [:id, :amount])
-
         @test nrows(batch) == 3
         @test ncols(batch) == 2
         @test batch.names == [:id, :amount]
@@ -64,10 +62,8 @@ using JBIXCore
         ids = ColumnVector(Int64[1, 2, 3, 4], Int64Tag)
         amounts = ColumnVector(Float64[10.0, 20.0, 30.0, 40.0], Float64Tag)
         batch = RecordBatch([ids, amounts], [:id, :amount])
-
         selection = filter_column(amounts, x -> x >= 20.0)
         filtered_batch = apply_selection(batch, selection)
-
         @test nrows(filtered_batch) == 3
         @test ncols(filtered_batch) == 2
         @test filtered_batch.columns[1].values == Int64[2, 3, 4]
@@ -76,16 +72,10 @@ using JBIXCore
 
     @testset "Apply Selection with nulls" begin
         ids = ColumnVector(Int64[1, 2, 3, 4], Int64Tag)
-        amounts = ColumnVector(
-            Float64[10.0, 20.0, 30.0, 40.0], 
-            Float64Tag; 
-            validity=BitVector([true, false, true, true])
-        )
+        amounts = ColumnVector(Float64[10.0, 20.0, 30.0, 40.0], Float64Tag; validity=BitVector([true, false, true, true]))
         batch = RecordBatch([ids, amounts], [:id, :amount])
-
         selection = filter_column(amounts, x -> x >= 20.0)
         filtered_batch = apply_selection(batch, selection)
-
         @test nrows(filtered_batch) == 2
         @test filtered_batch.columns[1].values == Int64[3, 4]
         @test filtered_batch.columns[2].values == Float64[30.0, 40.0]
@@ -97,10 +87,7 @@ using JBIXCore
         amounts = ColumnVector(Float64[10.0, 20.0, 30.0], Float64Tag)
         names = ColumnVector(String["A", "B", "C"], StringTag)
         batch = RecordBatch([ids, amounts, names], [:id, :amount, :name])
-
-        # শুধু amount এবং id কলামটি বেছে নিচ্ছি (অর্ডার পরিবর্তন করে)
         projected_batch = project(batch, [:amount, :id])
-
         @test ncols(projected_batch) == 2
         @test nrows(projected_batch) == 3
         @test projected_batch.names == [:amount, :id]
@@ -112,9 +99,32 @@ using JBIXCore
         ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
         amounts = ColumnVector(Float64[10.0, 20.0, 30.0], Float64Tag)
         batch = RecordBatch([ids, amounts], [:id, :amount])
-
-        # ভুল কলামের নাম দিলে ArgumentError দেবে
         @test_throws ArgumentError project(batch, [:id, :nonexistent])
+    end
+
+    @testset "Scalar: Add columns" begin
+        col1 = ColumnVector(Int64[1, 2, 3], Int64Tag)
+        col2 = ColumnVector(Int64[10, 20, 30], Int64Tag)
+        result = add_columns(col1, col2)
+        @test result.values == Int64[11, 22, 33]
+        @test result.logical_type == Int64Tag
+        @test all(result.validity)
+    end
+
+    @testset "Scalar: Add columns with null propagation" begin
+        col1 = ColumnVector(Int64[1, 2, 3], Int64Tag; validity=BitVector([true, false, true]))
+        col2 = ColumnVector(Int64[10, 20, 30], Int64Tag)
+        result = add_columns(col1, col2)
+        @test result.values == Int64[11, 0, 33] # Null slot can be anything internally
+        @test result.validity == BitVector([true, false, true])
+    end
+
+    @testset "Scalar: Multiply scalar" begin
+        col = ColumnVector(Float64[1.5, 2.5, 3.5], Float64Tag; validity=BitVector([true, false, true]))
+        result = multiply_scalar(col, 2)
+        @test result.values == Float64[3.0, 5.0, 7.0]
+        @test result.validity == BitVector([true, false, true])
+        @test result.logical_type == Float64Tag
     end
 
 end

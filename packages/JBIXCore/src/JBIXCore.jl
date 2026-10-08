@@ -15,7 +15,9 @@ export
     ncols,
     filter_column,
     apply_selection,
-    project
+    project,
+    add_columns,
+    multiply_scalar
 
 include("types.jl")
 include("vectors.jl")
@@ -24,5 +26,6 @@ include("selection.jl")
 include("filter.jl")
 include("apply_selection.jl")
 include("project.jl")
+include("scalar_functions.jl")
 
 end
