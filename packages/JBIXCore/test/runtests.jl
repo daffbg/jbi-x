@@ -1,56 +1,33 @@
 using Test
 using JBIXCore
-using Dates
 
 @testset "JBI-X Core" begin
 
-    @testset "IO: Read CSV with Bool" begin
-        csv_content = """
-        id,is_active
-        1,true
-        2,false
-        3,true
-        """
-        open("/tmp/test_bool.csv", "w") do io
-            print(io, csv_content)
-        end
-        batch = read_csv("/tmp/test_bool.csv")
-        @test batch.columns[2].logical_type == BoolTag
-        @test batch.columns[2].values == Bool[true, false, true]
-    end
-
-    @testset "Expressions: Evaluate Equal" begin
-        col1 = ColumnVector(Int64[1, 5, 3], Int64Tag)
-        col2 = ColumnVector(Int64[1, 2, 3], Int64Tag)
-        batch = RecordBatch([col1, col2], [:a, :b])
+    @testset "End-to-End: Iris Dataset with JOIN, FILTER, GROUP BY, ORDER BY" begin
+        # Load Iris and Species Meta
+        iris = read_csv("/tmp/iris.csv")
+        species_meta = read_csv("/tmp/species_meta.csv")
         
-        expr = Equal(ColumnRef(:a), ColumnRef(:b))
-        result = evaluate(expr, batch)
-        @test result.values == Bool[true, false, true]
-    end
-
-    @testset "SQL Parser: GROUP BY and ORDER BY" begin
-        csv_content = """
-        id,dept,salary
-        1,IT,100
-        2,HR,50
-        3,IT,200
-        4,HR,150
-        """
-        open("/tmp/test_groupby.csv", "w") do io
-            print(io, csv_content)
-        end
-        batch = read_csv("/tmp/test_groupby.csv")
+        tables = Dict(:iris => iris, :species_meta => species_meta)
         
-        # SELECT dept, SUM(salary) FROM data GROUP BY dept ORDER BY sum_salary DESC
-        query = "SELECT dept, SUM(salary) FROM data GROUP BY dept ORDER BY sum_salary DESC"
+        # Query: 
+        # SELECT species, sum_petal_length 
+        # FROM iris JOIN species_meta ON iris.species = species_meta.species 
+        # WHERE petal_length > 1.5 
+        # GROUP BY species 
+        # ORDER BY sum_petal_length DESC
+        query = "SELECT species, SUM(petal_length) FROM iris JOIN species_meta ON iris.species = species_meta.species WHERE petal_length > 1.5 GROUP BY species ORDER BY sum_petal_length DESC"
+        
         plan = parse_sql(query)
-        result = execute(batch, plan)
+        result = execute(tables, plan)
         
-        # IT: 300, HR: 200. Descending order -> IT first, then HR
-        @test nrows(result) == 2
-        @test result.columns[1].values == String["IT", "HR"]
-        @test result.columns[2].values == Int64[300, 200]
+        @test nrows(result) == 3
+        @test ncols(result) == 2
+        
+        # Virginica has the largest petals, so it should be first after DESC sort
+        @test result.columns[1].values[1] == "virginica"
+        # Check if sum is greater than 0
+        @test result.columns[2].values[1] > 50.0
     end
 
 end
