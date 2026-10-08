@@ -3,47 +3,44 @@ using JBIXCore
 
 @testset "JBI-X Core" begin
 
-    @testset "Aggregate: Group By and Sum" begin
-        # ডেটা: 
-        # dept, salary
-        # IT,   100
-        # HR,   50
-        # IT,   200
-        # HR,   (null)
-        # IT,   300
-        depts = ColumnVector(String["IT", "HR", "IT", "HR", "IT"], StringTag)
-        salaries = ColumnVector(
-            Int64[100, 50, 200, 0, 300], 
-            Int64Tag; 
-            validity=BitVector([true, true, true, false, true])
-        )
-        batch = RecordBatch([depts, salaries], [:dept, :salary])
+    @testset "Join: Hash Inner Join" begin
+        order_ids = ColumnVector(Int64[1, 2, 3, 4], Int64Tag)
+        cust_ids = ColumnVector(Int64[101, 102, 101, 103], Int64Tag)
+        left_batch = RecordBatch([order_ids, cust_ids], [:order_id, :cust_id])
         
-        result_batch = hash_aggregate_sum(batch, :dept, :salary)
+        r_cust_ids = ColumnVector(Int64[101, 102], Int64Tag)
+        names = ColumnVector(String["Alice", "Bob"], StringTag)
+        right_batch = RecordBatch([r_cust_ids, names], [:cust_id, :name])
         
-        # দুটি গ্রুপ থাকার কথা (IT এবং HR)
-        @test nrows(result_batch) == 2
-        @test ncols(result_batch) == 2
-        @test :sum_salary in result_batch.names
+        joined_batch = hash_join(left_batch, right_batch, :cust_id, :cust_id)
         
-        # রেজাল্ট আউটপুট যাচাই করা (অর্ডার র‍্যান্ডম হতে পারে, তাই ডিকশনারি ব্যবহার করা হলো)
-        res_dict = Dict(
-            result_batch.columns[1].values[i] => result_batch.columns[2].values[i]
-            for i in 1:nrows(result_batch)
+        @test nrows(joined_batch) == 3
+        @test ncols(joined_batch) == 4
+        
+        # কলামের নাম ঠিক করা হয়েছে (name_right)
+        @test joined_batch.names == [:order_id, :cust_id, :cust_id_right, :name_right]
+        
+        # name_right খুঁজে বের করা হচ্ছে
+        order_id_idx = findfirst(==(:order_id), joined_batch.names)
+        name_idx = findfirst(==(:name_right), joined_batch.names)
+        
+        result_pairs = Dict(
+            joined_batch.columns[order_id_idx].values[i] => joined_batch.columns[name_idx].values[i]
+            for i in 1:nrows(joined_batch)
         )
         
-        # IT এর যোগফল হওয়া উচিত 100 + 200 + 300 = 600
-        @test res_dict["IT"] == 600
-        # HR এর যোগফল হওয়া উচিত 50 + 0 (null কে ০ ধরা হয়েছে) = 50
-        @test res_dict["HR"] == 50
+        @test result_pairs[1] == "Alice"
+        @test result_pairs[2] == "Bob"
+        @test result_pairs[3] == "Alice"
     end
 
-    @testset "Aggregate: Validation" begin
+    @testset "Join: Validation" begin
         ids = ColumnVector(Int64[1, 2], Int64Tag)
-        batch = RecordBatch([ids], [:id])
+        left = RecordBatch([ids], [:id])
+        right = RecordBatch([ids], [:id])
         
-        @test_throws ArgumentError hash_aggregate_sum(batch, :nonexistent, :id)
-        @test_throws ArgumentError hash_aggregate_sum(batch, :id, :nonexistent)
+        @test_throws ArgumentError hash_join(left, right, :nonexistent, :id)
+        @test_throws ArgumentError hash_join(left, right, :id, :nonexistent)
     end
 
 end

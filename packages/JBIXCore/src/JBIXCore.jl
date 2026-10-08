@@ -27,7 +27,8 @@ export
     read_csv,
     QueryPlan,
     execute,
-    hash_aggregate_sum
+    hash_aggregate_sum,
+    hash_join
 
 include("types.jl")
 include("vectors.jl")
@@ -41,5 +42,6 @@ include("expressions.jl")
 include("io.jl")
 include("executor.jl")
 include("aggregate.jl")
+include("join.jl")
 
 end
