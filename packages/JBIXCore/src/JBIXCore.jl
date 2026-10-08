@@ -25,10 +25,13 @@ export
     GreaterThan,
     evaluate,
     read_csv,
+    write_csv,
     QueryPlan,
     execute,
     hash_aggregate_sum,
-    hash_join
+    hash_join,
+    sort_batch,
+    print_batch
 
 include("types.jl")
 include("vectors.jl")
@@ -43,5 +46,7 @@ include("io.jl")
 include("executor.jl")
 include("aggregate.jl")
 include("join.jl")
+include("sort.jl")
+include("cli.jl")
 
 end

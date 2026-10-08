@@ -1,6 +1,5 @@
 """
-Simple CSV reader to load data into a RecordBatch.
-Supports Int64, Float64, and String columns.
+Simple CSV reader and writer.
 """
 function read_csv(
     path::String;
@@ -15,7 +14,6 @@ function read_csv(
     ncols = length(header)
     nrows = length(data_lines)
     
-    # র ডেটা স্ট্রিং হিসেবে স্টোর করছি
     raw_data = Vector{Vector{String}}(undef, ncols)
     for i in 1:ncols
         raw_data[i] = Vector{String}(undef, nrows)
@@ -28,7 +26,6 @@ function read_csv(
         end
     end
     
-    # টাইপ ইনফারেন্স এবং কলাম তৈরি
     columns = Vector{Any}(undef, ncols)
     names = Vector{Symbol}(undef, ncols)
     
@@ -36,9 +33,7 @@ function read_csv(
         names[c] = Symbol(header[c])
         col_strs = raw_data[c]
         
-        # সবগুলো কি Int64?
         is_int = all(x -> occursin(r"^-?\d+$", x), col_strs)
-        # সবগুলো কি Float64?
         is_float = all(x -> occursin(r"^-?\d+(\.\d+)?([eE][-+]?\d+)?$", x), col_strs)
         
         if is_int
@@ -54,4 +49,34 @@ function read_csv(
     end
     
     return RecordBatch(columns, names)
+end
+
+"""
+Write a RecordBatch to a CSV file.
+Null values are written as empty strings.
+"""
+function write_csv(
+    batch::RecordBatch,
+    path::String;
+    delim::Char=','
+)
+    open(path, "w") do io
+        # Write header
+        println(io, join(String.(batch.names), delim))
+        
+        # Write rows
+        for r in 1:nrows(batch)
+            row_vals = String[]
+            for c in 1:ncols(batch)
+                col = batch.columns[c]
+                if col.validity[r]
+                    push!(row_vals, string(col.values[r]))
+                else
+                    push!(row_vals, "") # Null represented as empty
+                end
+            end
+            println(io, join(row_vals, delim))
+        end
+    end
+    return path
 end
