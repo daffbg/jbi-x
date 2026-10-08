@@ -1,78 +1,24 @@
 module JBIXCore
 
 export
-    DataTypeTag,
-    Int64Tag,
-    Float64Tag,
-    BoolTag,
-    StringTag,
-    DateTag,
-    ColumnVector,
-    RecordBatch,
-    SelectionVector,
-    selected_count,
-    nrows,
-    ncols,
-    filter_column,
-    apply_selection,
-    project,
-    add_columns,
-    multiply_scalar,
-    Expression,
-    Literal,
-    ColumnRef,
-    Add,
-    GreaterThan,
-    Equal,
-    evaluate,
-    read_csv,
-    read_csv_pages,
-    write_csv,
-    QueryPlan,
-    execute,
-    hash_aggregate_sum,
-    hash_join,
-    sort_batch,
-    print_batch,
-    parse_sql,
-    start_repl,
-    row_number,
-    rank,
-    LinearRegressionModel,
-    train_linear_regression,
-    predict,
-    LogisticRegressionModel,
-    train_logistic_regression,
-    predict_proba,
-    HashIndex,
-    create_index,
-    filter_using_index,
-    process_request,
-    start_server,
-    save_batch,
-    load_batch
+    DataTypeTag, Int64Tag, Float64Tag, BoolTag, StringTag, DateTag,
+    ColumnVector, RecordBatch, SelectionVector, selected_count, nrows, ncols,
+    filter_column, apply_selection, project, add_columns, multiply_scalar,
+    Expression, Literal, ColumnRef, Add, GreaterThan, Equal, evaluate,
+    read_csv, read_csv_pages, write_csv,
+    QueryPlan, execute, hash_aggregate_sum, hash_join, sort_batch, print_batch, parse_sql, start_repl,
+    row_number, rank,
+    LinearRegressionModel, train_linear_regression, predict,
+    LogisticRegressionModel, train_logistic_regression, predict_proba,
+    KMeansModel, train_kmeans, predict_cluster,
+    HashIndex, create_index, filter_using_index,
+    process_request, start_server,
+    save_batch, load_batch
 
-include("types.jl")
-include("vectors.jl")
-include("batch.jl")
-include("selection.jl")
-include("filter.jl")
-include("apply_selection.jl")
-include("project.jl")
-include("scalar_functions.jl")
-include("expressions.jl")
-include("io.jl")
-include("executor.jl")
-include("aggregate.jl")
-include("join.jl")
-include("sort.jl")
-include("cli.jl")
-include("sql_parser.jl")
-include("repl.jl")
-include("window.jl")
-include("ml.jl")
-include("indexing.jl")
-include("server.jl")
-include("persistence.jl")
+include("types.jl"); include("vectors.jl"); include("batch.jl"); include("selection.jl")
+include("filter.jl"); include("apply_selection.jl"); include("project.jl"); include("scalar_functions.jl")
+include("expressions.jl"); include("io.jl"); include("executor.jl"); include("aggregate.jl")
+include("join.jl"); include("sort.jl"); include("cli.jl"); include("sql_parser.jl"); include("repl.jl")
+include("window.jl"); include("ml.jl"); include("indexing.jl"); include("server.jl"); include("persistence.jl")
 
 end
