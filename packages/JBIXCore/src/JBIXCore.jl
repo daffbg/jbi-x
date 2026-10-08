@@ -24,7 +24,9 @@ export
     Add,
     GreaterThan,
     evaluate,
-    read_csv
+    read_csv,
+    QueryPlan,
+    execute
 
 include("types.jl")
 include("vectors.jl")
@@ -36,5 +38,6 @@ include("project.jl")
 include("scalar_functions.jl")
 include("expressions.jl")
 include("io.jl")
+include("executor.jl")
 
 end

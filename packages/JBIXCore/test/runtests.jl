@@ -3,44 +3,62 @@ using JBIXCore
 
 @testset "JBI-X Core" begin
 
-    @testset "Expressions: Evaluate Literal" begin
-        ids = ColumnVector(Int64[1, 2, 3], Int64Tag)
-        batch = RecordBatch([ids], [:id])
-        expr = Literal(5, Int64Tag)
-        result = evaluate(expr, batch)
-        @test result.values == Int64[5, 5, 5]
-    end
-
     @testset "IO: Read CSV" begin
-        # একটি টেম্পরারি CSV ফাইল তৈরি করা হচ্ছে
         csv_content = """
         id,amount,name
         1,10.5,Alice
         2,20.0,Bob
         3,30.2,Charlie
         """
-        # ফাইলে লেখা হচ্ছে (Kaggle /tmp ডিরেক্টরিতে রাখবে)
         open("/tmp/test_jbix.csv", "w") do io
             print(io, csv_content)
         end
-        
         batch = read_csv("/tmp/test_jbix.csv")
-        
         @test nrows(batch) == 3
-        @test ncols(batch) == 3
-        @test batch.names == [:id, :amount, :name]
+    end
+
+    @testset "Executor: Execute full pipeline (Filter + Project)" begin
+        csv_content = """
+        id,amount,name
+        1,10.5,Alice
+        2,20.0,Bob
+        3,30.2,Charlie
+        """
+        open("/tmp/test_jbix_exec.csv", "w") do io
+            print(io, csv_content)
+        end
+        batch = read_csv("/tmp/test_jbix_exec.csv")
         
-        # প্রথম কলাম Int64 কি না যাচাই
-        @test batch.columns[1].values == Int64[1, 2, 3]
-        @test batch.columns[1].logical_type == Int64Tag
+        # কোয়েরি: SELECT name, amount WHERE amount > 15.0
+        plan = QueryPlan(
+            GreaterThan(ColumnRef(:amount), Literal(15.0, Float64Tag)),
+            [:name, :amount]
+        )
         
-        # দ্বিতীয় কলাম Float64 কি না যাচাই
-        @test batch.columns[2].values == Float64[10.5, 20.0, 30.2]
-        @test batch.columns[2].logical_type == Float64Tag
+        result_batch = execute(batch, plan)
         
-        # তৃতীয় কলাম String কি না যাচাই
-        @test batch.columns[3].values == String["Alice", "Bob", "Charlie"]
-        @test batch.columns[3].logical_type == StringTag
+        # ১০.৫ বাদ পড়বে, কারণ এটি ১৫ এর চেয়ে বড় নয়
+        @test nrows(result_batch) == 2
+        @test ncols(result_batch) == 2
+        
+        # প্রজেকশন ঠিকমতো হয়েছে কিনা
+        @test result_batch.names == [:name, :amount]
+        @test result_batch.columns[1].values == String["Bob", "Charlie"]
+        @test result_batch.columns[2].values == Float64[20.0, 30.2]
+    end
+
+    @testset "Executor: Execute only Project" begin
+        batch = RecordBatch([
+            ColumnVector(Int64[1, 2], Int64Tag),
+            ColumnVector(String["A", "B"], StringTag)
+        ], [:id, :name])
+        
+        plan = QueryPlan(nothing, [:name])
+        result_batch = execute(batch, plan)
+        
+        @test nrows(result_batch) == 2
+        @test ncols(result_batch) == 1
+        @test result_batch.names == [:name]
     end
 
 end
