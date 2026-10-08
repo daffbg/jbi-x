@@ -13,12 +13,14 @@ export
     selected_count,
     nrows,
     ncols,
-    filter_column
+    filter_column,
+    apply_selection
 
 include("types.jl")
 include("vectors.jl")
 include("batch.jl")
 include("selection.jl")
 include("filter.jl")
+include("apply_selection.jl")
 
 end
