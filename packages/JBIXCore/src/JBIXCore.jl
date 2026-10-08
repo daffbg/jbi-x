@@ -46,7 +46,9 @@ export
     predict_proba,
     HashIndex,
     create_index,
-    filter_using_index
+    filter_using_index,
+    process_request,
+    start_server
 
 include("types.jl")
 include("vectors.jl")
@@ -68,5 +70,6 @@ include("repl.jl")
 include("window.jl")
 include("ml.jl")
 include("indexing.jl")
+include("server.jl")
 
 end
